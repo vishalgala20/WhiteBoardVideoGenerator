@@ -1,22 +1,62 @@
-import openai
 from gtts import gTTS
 import os
-from moviepy.editor import VideoFileClip, AudioFileClip
+from moviepy import *
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+import time
 
-# Set your OpenAI API key
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Function to interact with the free web-based ChatGPT
+def generate_response_web(prompt):
+    # Path to your ChromeDriver
+    chrome_driver_path = r"C:\Users\Appex\Downloads\chromedriver-win64\chromedriver-win64\chromedriver.exe"
 
-# Define a function to generate AI response (e.g., poem or any text)
-def generate_response(model, prompt, max_tokens=100):
+
+    # Set up Chrome options
+    chrome_options = Options()
+    chrome_options.add_argument("--start-maximized")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_argument("--headless")  # Optional: Run in headless mode (no GUI)
+
+    # Initialize WebDriver
+    service = Service(chrome_driver_path)
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+
     try:
-        response = openai.Completion.create(
-            model=model,
-            prompt=prompt,
-            max_tokens=max_tokens
-        )
-        return response.choices[0].text.strip()
-    except openai.error.OpenAIError as e:
+        # Open the ChatGPT website
+        chatgpt_url = "https://chat.openai.com/"
+        driver.get(chatgpt_url)
+
+        # Wait for the page to load (adjust sleep time as needed)
+        print("Waiting for ChatGPT website to load...")
+        time.sleep(10)
+
+        # Locate the input text area
+        input_box = driver.find_element(By.TAG_NAME, "textarea")
+
+        # Input the prompt
+        input_box.send_keys(prompt)
+        input_box.send_keys(Keys.RETURN)
+
+        # Wait for the response to generate (adjust sleep time as necessary)
+        print("Waiting for ChatGPT response...")
+        time.sleep(15)
+
+        # Locate the response area
+        response_elements = driver.find_elements(By.CSS_SELECTOR, ".markdown")  # Adjust selector as needed
+        response_text = "\n".join([element.text for element in response_elements])
+
+        print("Response received from ChatGPT.")
+        return response_text
+
+    except Exception as e:
         return f"An error occurred: {str(e)}"
+
+    finally:
+        # Close the browser
+        driver.quit()
 
 # Function to convert text to speech and save as an audio file
 def text_to_speech(text, filename="output.mp3"):
@@ -25,17 +65,7 @@ def text_to_speech(text, filename="output.mp3"):
     print(f"Audio saved as {filename}")
 
 # Function to create a whiteboard animation (just an example placeholder)
-# Here you will generate the animation based on the generated text
 def create_whiteboard_animation(text, filename="whiteboard_animation.mp4"):
-    # This is just a placeholder for where the animation generation logic would go
-    # You can use Manim, PIL, or OpenCV to create an actual animation
-    print("Creating whiteboard animation for the text...")
-    
-    # Create a blank whiteboard screen (for example)
-    # For simplicity, we create a blank whiteboard video here, you can replace this with your actual animation
-    # For advanced animations, refer to Manim or other animation tools
-
-    # Example with MoviePy to create a simple whiteboard-like background
     from moviepy.editor import TextClip
 
     text_clip = TextClip(text, fontsize=30, color='black', bg_color='white', size=(1280, 720), method='caption')
@@ -46,11 +76,10 @@ def create_whiteboard_animation(text, filename="whiteboard_animation.mp4"):
 
 # Main function
 if __name__ == "__main__":
-    model_name = "gpt-3.5-turbo"
     prompt = "Write a poem about the stars."
     
-    # Step 1: Generate AI response (e.g., a poem)
-    response_text = generate_response(model_name, prompt)
+    # Step 1: Generate AI response from the web-based ChatGPT
+    response_text = generate_response_web(prompt)
     print(f"Generated Text: {response_text}")
     
     # Step 2: Convert generated text to speech and save it as an audio file
